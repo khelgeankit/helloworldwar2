@@ -1,0 +1,30 @@
+pipeline {
+    agent none
+    stages {
+        stage('my Build') {
+        agent {label 'slave1'}
+            steps {
+                sh 'docker build -t tomcat_build:${BUILD_NUMBER} --build-arg BUILD_NUMBER=${BUILD_NUMBER} .'
+            }
+        }  
+        stage('publish stage') {
+        agent {label 'slave1'}
+            steps {
+                sh "echo ${BUILD_NUMBER}"
+                withCredentials([usernamePassword(credentialsId: 'dockerHub', passwordVariable: 'dockerHubPassword', usernameVariable: 'dockerHubUser')]){
+                sh "docker login -u ${dockerHubUSER} -p ${dockerHubPassword}"
+                sh 'docker tag tomcat_build:${BUILD_NUMBER} sangmeshbhure/bhurebest:${BUILD_NUMBER}'
+                sh 'docker push sangmeshbhure/bhurebest:${BUILD_NUMBER}'
+                }
+            }
+        }    
+        stage( 'my deploy' ) {
+        agent {label 'slave2'}
+            steps {
+               sh 'helm package ./tomcat --version=${BUILD_NUMBER}'
+               sh 'tar -xvf tomcat-${BUILD_NUMBER}.tgz'
+               sh 'helm upgrade --install tomcat ./tomcat --set image=sangmeshbhure/bhurebest:${BUILD_NUMBER}'
+            }
+        } 
+    } 
+}

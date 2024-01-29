@@ -1,0 +1,28 @@
+pipeline {
+    agent none
+    stages {
+        stage ('build stage') {
+            agent {label 'slave1'}
+            steps {
+                sh 'docker build -t mytomimage:${BUILD_NUMBER} --build-arg BUILD_NUMBER=${BUILD_NUMBER} .'
+            }
+        }
+        stage ('publish stage') {
+            agent {label 'slave1'}
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'dockerhubPassword', usernameVariable: 'dockerhubUser')]) {
+                sh 'docker login -u ${dockerhubUser} -p ${dockerhubPassword}'
+                sh 'docker tag mytomimage:${BUILD_NUMBER} sangmeshbhure/bhure:${BUILD_NUMBER}'
+                sh 'docker push sangmeshbhure/bhure:${BUILD_NUMBER}'
+                }
+            }
+        }
+        stage ('deploy stage') {
+            agent {label 'slave2'}
+            steps {
+                sh 'docker rm -f container1'
+                sh 'docker run -d -p 8080:8080 --name container1 sangmeshbhure/bhure:${BUILD_NUMBER}'
+            }
+        }
+    }
+}    

@@ -1,0 +1,20 @@
+pipeline {
+    agent none
+    stages {
+        stage ('my build') {
+            agent { label 'build' }
+            steps {
+                sh 'sudo mvn package'
+                sh 'sudo mv /root/workspace/pipeline1/target/hello-world-war-null.war /root/workspace/pipeline1/target/hello-world-war-${BUILD_NUMBER}.war' 
+                sh 'sudo scp -r target/hello-world-war-${BUILD_NUMBER}.war root@13.234.232.107:/opt/apache/webapps'
+            }
+        }
+        stage ('my deploy') {
+            agent { label 'deploy' }
+            steps {
+                sh 'sudo sh /opt/apache/bin/shutdown.sh'
+                sh 'sudo sh /opt/apache/bin/startup.sh'
+            }
+        }
+    }
+}
